@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # LaTeX to PDF service. Build for Cloudflare Containers, which run linux/amd64:
-#   npm run vendor        (copies the Jupiter style, fonts and graphics into ./jupiter)
 #   docker build --platform linux/amd64 -t tectonic-pdf-service .
+# Files in ./assets (class files, fonts, images) are copied into every compile job. The directory may hold only .gitkeep.
 # This Dockerfile has not been built: Docker was not available where it was written. See README.md.
 
 ARG NODE_IMAGE=node:22-slim
@@ -21,15 +21,15 @@ RUN set -eux; \
     /out/tectonic --version
 
 # ---- Stage 2: fill the Tectonic cache -------------------------------------------------------------------------------
-# Needs network. The result is a cache of the bundle files and the XeLaTeX format that the Jupiter style uses.
+# Needs network. The result is a cache of the bundle files and the XeLaTeX format for the packages in warmup/*.tex.
 FROM --platform=linux/amd64 ${NODE_IMAGE} AS warm
 ARG MIN_CACHE_MB=40
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=tectonic /out/tectonic /usr/local/bin/tectonic
-COPY jupiter/ /opt/jupiter/
+COPY assets/ /opt/assets/
 COPY warmup/ /opt/warmup/
 ENV TECTONIC_CACHE_DIR=/opt/tectonic-cache
-RUN mkdir -p "$TECTONIC_CACHE_DIR" && sh /opt/warmup/warm.sh /opt/jupiter "${MIN_CACHE_MB}"
+RUN mkdir -p "$TECTONIC_CACHE_DIR" && sh /opt/warmup/warm.sh /opt/assets "${MIN_CACHE_MB}"
 
 # ---- Stage 3: run-time image ----------------------------------------------------------------------------------------
 FROM --platform=linux/amd64 ${NODE_IMAGE}
@@ -40,11 +40,10 @@ COPY --from=tectonic /out/tectonic /usr/local/bin/tectonic
 # The build fails here when the binary does not run in this base image.
 RUN tectonic --version | grep -q "Tectonic 0.17.0"
 
-# Cache and Jupiter files are owned by root and not writable: the service reads them and writes nothing there.
+# Cache and asset files are owned by root and not writable: the service reads them and writes nothing there.
 COPY --from=warm /opt/tectonic-cache /opt/tectonic-cache
-COPY jupiter/ /opt/jupiter/
-RUN chown -R root:root /opt/tectonic-cache /opt/jupiter && chmod -R a-w,a+rX /opt/tectonic-cache /opt/jupiter \
-    && test -f /opt/jupiter/jupiter.sty && test -f /opt/jupiter/sgi-text-400.otf \
+COPY assets/ /opt/assets/
+RUN chown -R root:root /opt/tectonic-cache /opt/assets && chmod -R a-w,a+rX /opt/tectonic-cache /opt/assets \
     && size="$(du -sm /opt/tectonic-cache | cut -f1)" && echo "tectonic cache: ${size} MB" && test "$size" -ge 40
 
 WORKDIR /srv/pdf-service
@@ -56,7 +55,7 @@ ENV NODE_ENV=production \
     PORT=8080 \
     TECTONIC_BIN=/usr/local/bin/tectonic \
     TECTONIC_CACHE_DIR=/opt/tectonic-cache \
-    JUPITER_DIR=/opt/jupiter
+    ASSETS_DIR=/opt/assets
 USER app
 EXPOSE 8080
 CMD ["node", "src/index.mjs"]

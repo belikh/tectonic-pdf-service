@@ -1,4 +1,4 @@
-# Keep the build context to what the Dockerfile copies. jupiter/ is NOT ignored: the Dockerfile copies it.
+# Keep the build context to what the Dockerfile copies. assets/ is NOT ignored: the Dockerfile copies it.
 test
 README.md
 .gitignore

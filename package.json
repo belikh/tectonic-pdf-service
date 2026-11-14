@@ -13,7 +13,6 @@
   },
   "scripts": {
     "start": "node src/index.mjs",
-    "vendor": "node scripts/vendor-jupiter.mjs",
     "test": "vitest run"
   },
   "devDependencies": {

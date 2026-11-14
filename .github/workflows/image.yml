@@ -1,9 +1,7 @@
 # Runs only when started by hand (workflow_dispatch) and needs the repository secrets CLOUDFLARE_API_TOKEN and
 # CLOUDFLARE_ACCOUNT_ID. It has never run.
 # It builds the image for linux/amd64 and pushes the image to the Cloudflare registry (registry.cloudflare.com).
-# Unverified: the token permissions that `wrangler containers push` needs, and whether belikh/design and belikh/docs
-# can be checked out with the default GITHUB_TOKEN (they can if both repositories are public), and whether
-# packages/tokens/dist/jupiter-tokens.sty is committed in belikh/design (the vendor step fails if it is not).
+# Unverified: the token permissions that `wrangler containers push` needs.
 name: image
 
 on:
@@ -31,24 +29,10 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "secret CLOUDFLARE_ACCOUNT_ID is not set" >&2; exit 1; }
 
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: belikh/design
-          path: .ci/design
-      - uses: actions/checkout@v4
-        with:
-          repository: belikh/docs
-          path: .ci/docs
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Copy the Jupiter LaTeX files into the build context
-        env:
-          JUPITER_DESIGN_DIR: ${{ github.workspace }}/.ci/design
-          JUPITER_DOCS_DIR: ${{ github.workspace }}/.ci/docs
-        run: node scripts/vendor-jupiter.mjs
-
       - uses: docker/setup-buildx-action@v3
 
       - name: Build for linux/amd64

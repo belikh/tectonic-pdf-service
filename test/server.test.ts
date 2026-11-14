@@ -10,9 +10,6 @@ const TECTONIC = process.env.TECTONIC_BIN ?? "";
 const CACHE_SRC = process.env.TECTONIC_TEST_CACHE ?? "";
 const haveTectonic = TECTONIC !== "" && CACHE_SRC !== "" && existsSync(TECTONIC) && existsSync(CACHE_SRC);
 if (!haveTectonic) console.warn(`pdf-service: Tectonic tests skipped, no binary at ${TECTONIC} or no cache at ${CACHE_SRC}`);
-const JUPITER = new URL("../jupiter", import.meta.url).pathname;
-// Path of the Jupiter report.tex template (packages/latex/templates/report.tex in the design repository). The test is skipped when unset.
-const REPORT = process.env.JUPITER_REPORT_TEX ?? "";
 
 const root = mkdtempSync(join(tmpdir(), "pdfsvc-test-"));
 let readOnlyCache = "";
@@ -141,14 +138,21 @@ describe("pdf-service path rejection", () => {
     const a = await start();
     expect((await a.compile({ main: "OK", files: { a: "1", "a/b.tex": "2" } })).status).toBe(400);
   });
-  it("rejects a name from the Jupiter directory", async () => {
-    const jupiterDir = join(root, "jup"); mkdirSync(jupiterDir, { recursive: true });
-    writeFileSync(join(jupiterDir, "jupiter.sty"), "% stub");
-    const a = await start({ jupiterDir });
-    const r = await a.compile({ main: "OK", files: { "Jupiter.sty": "% mine" } });
+  it("rejects a name from the assets directory", async () => {
+    const assetsDir = join(root, "assets"); mkdirSync(assetsDir, { recursive: true });
+    writeFileSync(join(assetsDir, "mystyle.sty"), "% stub");
+    writeFileSync(join(assetsDir, ".gitkeep"), "");
+    const a = await start({ assetsDir });
+    const r = await a.compile({ main: "OK", files: { "MyStyle.sty": "% mine" } });
     expect(r.status).toBe(400);
-    expect((await r.json()).error).toContain("Jupiter");
+    expect((await r.json()).error).toContain("built-in asset");
     expect((await a.compile({ main: "OK" })).status).toBe(200);
+  });
+  it("does not reserve dot files in the assets directory", async () => {
+    const assetsDir = join(root, "assets-dot"); mkdirSync(assetsDir, { recursive: true });
+    writeFileSync(join(assetsDir, ".gitkeep"), "");
+    const a = await start({ assetsDir });
+    expect((await a.compile({ main: "OK", files: { ".gitkeep": "mine" } })).status).toBe(200);
   });
 });
 
@@ -310,9 +314,11 @@ describe.skipIf(!haveTectonic)("pdf-service with Tectonic (needs the binary and 
     expect(Date.now() - t0).toBeLessThan(15000);
     expect(readdirSync(a.jobRoot)).toEqual([]);
   });
-  it.skipIf(!existsSync(JUPITER) || REPORT === "" || !existsSync(REPORT))("compiles the Jupiter report template with the built-in style and fonts", async () => {
-    const a = await real({ jupiterDir: JUPITER });
-    const r = await a.compile({ main: readFileSync(REPORT, "utf8") });
+  it("compiles a document that loads a style file from the assets directory", async () => {
+    const assetsDir = join(root, "assets-real"); mkdirSync(assetsDir, { recursive: true });
+    writeFileSync(join(assetsDir, "mystyle.sty"), "\\ProvidesPackage{mystyle}\\newcommand{\\greeting}{Hello from assets}");
+    const a = await real({ assetsDir });
+    const r = await a.compile({ main: "\\documentclass{article}\\usepackage{mystyle}\\begin{document}\\greeting\\end{document}" });
     expect(r.status).toBe(200);
     expect(Buffer.from(await r.arrayBuffer()).subarray(0, 4).toString()).toBe("%PDF");
   }, 60000);

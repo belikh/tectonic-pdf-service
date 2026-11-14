@@ -35,7 +35,7 @@ export function cleanPath(name, reserved = new Set()) {
   if (norm.length > 200) throw bad("file name is longer than 200 characters");
   const lower = norm.toLowerCase();
   if (lower === "main.tex") throw bad("main.tex is reserved: send the document as `main`");
-  if (reserved.has(lower)) throw bad(`${norm} is part of the built-in Jupiter style and cannot be replaced`);
+  if (reserved.has(lower)) throw bad(`${norm} is a built-in asset and cannot be replaced`);
   return norm;
 }
 

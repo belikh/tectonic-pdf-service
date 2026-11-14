@@ -1,6 +1,6 @@
-% Warm-up document for the image build. It loads every package the Jupiter style and jupiter-docs.cls use,
-% so the Tectonic cache holds them and `--only-cached` finds them at run time. Source of the list: the
-% \usepackage and \RequirePackage lines of design/packages/latex/src, jupiter-tokens.sty and docs/latex/jupiter-docs.cls.
+% Warm-up document for the image build. It loads the packages below so the Tectonic cache holds them and
+% `--only-cached` finds them at run time. A package that no warm-up document loads fails to compile in the image.
+% Add a \usepackage line here (or a new warmup/*.tex file) for each package your documents need.
 \documentclass{article}
 \usepackage{fontspec}
 \usepackage[english]{babel}

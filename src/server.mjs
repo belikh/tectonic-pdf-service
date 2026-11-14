@@ -24,7 +24,7 @@ export const ENV_KEYS = ["PATH", "HOME", "TECTONIC_CACHE_DIR", "TMPDIR"];
  * @param {string} [options.tectonicBin]    path or name of the tectonic binary (default env TECTONIC_BIN or "tectonic")
  * @param {string} [options.cacheDir]       Tectonic cache (default env TECTONIC_CACHE_DIR or /opt/tectonic-cache)
  * @param {string} [options.bundle]         pinned bundle URL (default env TECTONIC_BUNDLE or DEFAULT_BUNDLE)
- * @param {string} [options.jupiterDir]     files copied flat into every job (default env JUPITER_DIR; none when unset)
+ * @param {string} [options.assetsDir]      files copied flat into every job: class files, fonts, images (default env ASSETS_DIR; none when unset). Names that start with "." are skipped.
  * @param {string} [options.jobRoot]        where job directories go (default os.tmpdir())
  * @param {number} [options.timeoutMs]      compile timeout (default 60000)
  * @param {number} [options.concurrency]    simultaneous compiles (default 2)
@@ -36,7 +36,7 @@ export async function createApp(options = {}) {
     tectonicBin: options.tectonicBin ?? env.TECTONIC_BIN ?? "tectonic",
     cacheDir: options.cacheDir ?? env.TECTONIC_CACHE_DIR ?? "/opt/tectonic-cache",
     bundle: options.bundle ?? env.TECTONIC_BUNDLE ?? DEFAULT_BUNDLE,
-    jupiterDir: options.jupiterDir ?? env.JUPITER_DIR ?? "",
+    assetsDir: options.assetsDir ?? env.ASSETS_DIR ?? "",
     jobRoot: options.jobRoot ?? tmpdir(),
     timeoutMs: options.timeoutMs ?? 60_000,
     concurrency: options.concurrency ?? 2,
@@ -46,9 +46,12 @@ export async function createApp(options = {}) {
   await mkdir(cfg.jobRoot, { recursive: true });
   const jobRoot = await realpath(cfg.jobRoot);
 
-  // Names the caller may not send: everything in the Jupiter directory (top level, lower case).
-  const reserved = new Set();
-  if (cfg.jupiterDir) for (const name of await readdir(cfg.jupiterDir)) reserved.add(name.toLowerCase());
+  // Entries of the assets directory that go into every job. Dot files (such as .gitkeep) are placeholders.
+  const assetEntries = cfg.assetsDir
+    ? (await readdir(cfg.assetsDir, { withFileTypes: true })).filter((e) => !e.name.startsWith("."))
+    : [];
+  // Names the caller may not send: everything in the assets directory (top level, lower case).
+  const reserved = new Set(assetEntries.map((e) => e.name.toLowerCase()));
 
   // Counting semaphore with a bounded queue.
   const stats = { active: 0, waiting: 0, maxActive: 0, served: 0 };
@@ -83,11 +86,9 @@ export async function createApp(options = {}) {
     try {
       const src = join(jobDir, "src");
       await mkdir(src); await mkdir(join(jobDir, "out")); await mkdir(join(jobDir, "tmp"));
-      if (cfg.jupiterDir) {
-        for (const e of await readdir(cfg.jupiterDir, { withFileTypes: true })) {
-          if (e.isDirectory()) await cp(join(cfg.jupiterDir, e.name), join(src, e.name), { recursive: true });
-          else await copyFile(join(cfg.jupiterDir, e.name), join(src, e.name));
-        }
+      for (const e of assetEntries) {
+        if (e.isDirectory()) await cp(join(cfg.assetsDir, e.name), join(src, e.name), { recursive: true });
+        else await copyFile(join(cfg.assetsDir, e.name), join(src, e.name));
       }
       for (const f of job.files) {
         const target = resolve(src, f.path);
