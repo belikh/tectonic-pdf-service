@@ -28,7 +28,7 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "secret CLOUDFLARE_API_TOKEN is not set" >&2; exit 1; }
           test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "secret CLOUDFLARE_ACCOUNT_ID is not set" >&2; exit 1; }
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
