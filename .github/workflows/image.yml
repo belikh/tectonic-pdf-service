@@ -1,0 +1,64 @@
+# Runs only when started by hand (workflow_dispatch) and needs the repository secrets CLOUDFLARE_API_TOKEN and
+# CLOUDFLARE_ACCOUNT_ID. It has never run.
+# It builds the image for linux/amd64 and pushes the image to the Cloudflare registry (registry.cloudflare.com).
+# Unverified: the token permissions that `wrangler containers push` needs, and whether belikh/design and belikh/docs
+# can be checked out with the default GITHUB_TOKEN (they can if both repositories are public), and whether
+# packages/tokens/dist/jupiter-tokens.sty is committed in belikh/design (the vendor step fails if it is not).
+name: image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag to push, for example 2026-11-14 or a short commit id
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check the secrets exist
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "secret CLOUDFLARE_API_TOKEN is not set" >&2; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "secret CLOUDFLARE_ACCOUNT_ID is not set" >&2; exit 1; }
+
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: belikh/design
+          path: .ci/design
+      - uses: actions/checkout@v4
+        with:
+          repository: belikh/docs
+          path: .ci/docs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Copy the Jupiter LaTeX files into the build context
+        env:
+          JUPITER_DESIGN_DIR: ${{ github.workspace }}/.ci/design
+          JUPITER_DOCS_DIR: ${{ github.workspace }}/.ci/docs
+        run: node scripts/vendor-jupiter.mjs
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build for linux/amd64
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: tectonic-pdf-service:${{ inputs.tag }}
+
+      - name: Push to the Cloudflare registry
+        run: npx --yes wrangler@4 containers push "tectonic-pdf-service:${{ inputs.tag }}"

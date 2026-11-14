@@ -1,0 +1,40 @@
+% Warm-up document for the image build. It loads every package the Jupiter style and jupiter-docs.cls use,
+% so the Tectonic cache holds them and `--only-cached` finds them at run time. Source of the list: the
+% \usepackage and \RequirePackage lines of design/packages/latex/src, jupiter-tokens.sty and docs/latex/jupiter-docs.cls.
+\documentclass{article}
+\usepackage{fontspec}
+\usepackage[english]{babel}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{etoolbox}
+\usepackage{ragged2e}
+\usepackage[most]{tcolorbox}
+\tcbuselibrary{listings}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{titletoc}
+\usepackage{longtable}
+\usepackage{needspace}
+\usepackage{xkeyval}
+\usepackage{caption}
+\usepackage{colortbl}
+\usepackage{fvextra}
+\usepackage{newunicodechar}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{kvoptions}
+\usepackage{iftex}
+\usepackage{xparse}
+\begin{document}
+Warm-up document. \lstinline|code| \url{https://example.com}
+\begin{longtable}{ll}\toprule a & b\\\bottomrule\end{longtable}
+\end{document}

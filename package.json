@@ -1,0 +1,23 @@
+{
+  "name": "tectonic-pdf-service",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "HTTP service that compiles LaTeX to PDF with Tectonic in an isolated container.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/belikh/tectonic-pdf-service.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/index.mjs",
+    "vendor": "node scripts/vendor-jupiter.mjs",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0",
+    "typescript": "^6.0.0"
+  }
+}

@@ -1,0 +1,10 @@
+# Keep the build context to what the Dockerfile copies. jupiter/ is NOT ignored: the Dockerfile copies it.
+test
+README.md
+.gitignore
+.dockerignore
+node_modules
+*.pdf
+*.log
+.env
+.env.*
